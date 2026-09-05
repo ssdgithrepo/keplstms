@@ -1338,7 +1338,7 @@ main,.main-content,.content-area{min-width:0;max-width:100%;overflow-x:hidden}
   }
 
   // PASTE YOUR PUBLISHED APPS SCRIPT WEB APP ENDPOINT URL HERE
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-wlyNEoAuNN8qJw3lkb9W8S2QtQQXA-QaYLyzWoYA78_NLQVKN-v6I44TUauv1-zx/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyR5oluIbWMgxaAKIaAI6kQ-7oyS6v0DfwYtqPvzXD2qSGu_m3_3mG9Ut4sRgwxWC9B/exec";
 
   let currentUser = null;
   let rawData = { clients: [], tasks: [], coldCalls: [], approvals: [], salesOrders: [], todayAttendance: null };
@@ -1434,6 +1434,9 @@ main,.main-content,.content-area{min-width:0;max-width:100%;overflow-x:hidden}
       password: document.getElementById('loginPassword').value
     };
 
+    // Login is a public/unauthenticated request. Do not let an old cached session
+    // contaminate the login payload. The backend will issue a fresh authToken.
+    currentUser = null;
     showProcessingMessage('Signing in','Authenticating your account and loading your workspace...');
     const res = await callBackend('login', payload);
     if(res.success) {
@@ -1835,8 +1838,8 @@ main,.main-content,.content-area{min-width:0;max-width:100%;overflow-x:hidden}
     if(!weekday){statusText.innerHTML='<span class="text-muted fw-bold">Weekend — attendance punch is closed.</span>';actionBox.innerHTML='';return;}
     if(h<9){statusText.innerHTML='<span class="text-primary fw-bold">Punch-in opens at 09:00 AM.</span> Expected working time: 9 hours.';actionBox.innerHTML='<button class="btn btn-sm btn-outline-primary" disabled>Not open yet</button>';return;}
     if(h<=9.25){statusText.innerHTML='<span class="text-success fw-bold">FULL DAY window: 09:00–09:15.</span> Punch in now for full-day attendance.';actionBox.innerHTML='<button class="btn btn-sm btn-success px-3 fw-bold" onclick="markDailyAttendance()"><i class="bi bi-person-check-fill me-1"></i> Punch In — Full Day</button>';return;}
-    if(h<=14){statusText.innerHTML='<span class="text-warning fw-bold">LATE: 09:16 AM–02:00 PM = HALF DAY.</span> Punch in now to record the late mark.';actionBox.innerHTML='<button class="btn btn-sm btn-warning px-3 fw-bold" onclick="markDailyAttendance()"><i class="bi bi-person-check-fill me-1"></i> Punch In — Half Day</button>';return;}
-    statusText.innerHTML='<span class="text-danger fw-bold">AFTER 02:00 PM: FULL-DAY ATTENDANCE LOSS.</span> Punch-in remains available for an audit record.';actionBox.innerHTML='<button class="btn btn-sm btn-danger px-3 fw-bold" onclick="markDailyAttendance()"><i class="bi bi-person-check-fill me-1"></i> Punch In — Full-Day Loss</button>';
+    if(h<=14){statusText.innerHTML='<span class="text-warning fw-bold">LATE: 09:16 AM–01:00 PM = HALF DAY.</span> Punch in now to record the late mark.';actionBox.innerHTML='<button class="btn btn-sm btn-warning px-3 fw-bold" onclick="markDailyAttendance()"><i class="bi bi-person-check-fill me-1"></i> Punch In — Half Day</button>';return;}
+    statusText.innerHTML='<span class="text-danger fw-bold">AFTER 01:00 PM: attendance approval/late handling is required.</span> Punch-in remains available for an audit record.';actionBox.innerHTML='<button class="btn btn-sm btn-danger px-3 fw-bold" onclick="markDailyAttendance()"><i class="bi bi-person-check-fill me-1"></i> Punch In — Full-Day Loss</button>';
   }
 
   async function markDailyAttendance() {
@@ -2269,7 +2272,13 @@ main,.main-content,.content-area{min-width:0;max-width:100%;overflow-x:hidden}
   function updateSalesOrderCalculations(){const type=document.getElementById('soOrderFor')?.value,repeat=Math.max(1,salesOrderNum(document.getElementById('soRepeatCount')?.value)||1);let kw=0,lpd=0,amount=0;if(type==='Solar PV Modules'){const q=salesOrderNum(document.getElementById('soPanelQty')?.value),wp=salesOrderNum(document.getElementById('soPanelWp')?.value),rate=salesOrderNum(document.getElementById('soRateWp')?.value);kw=q*wp/1000;amount=q*wp*rate;document.getElementById('soCalcKw').value=kw.toFixed(3);document.getElementById('soCalcAmount').value=salesOrderMoney(amount);}else if(type==='Solar Water Heater'){lpd=salesOrderNum(document.getElementById('soLpd')?.value);const r=salesOrderNum(document.getElementById('soRateLpd')?.value);amount=lpd*r;document.getElementById('soWaterAmount').value=salesOrderMoney(amount);if(document.getElementById('soWaterLpd'))document.getElementById('soWaterLpd').value=lpd.toFixed(0);}else if(type==='Solar EPC Projects - Utility/C & I/Residentials'){kw=salesOrderNum(document.getElementById('soUtilityKw')?.value);amount=kw*salesOrderNum(document.getElementById('soUtilityRate')?.value);document.getElementById('soUtilityAmount').value=salesOrderMoney(amount);}document.getElementById('soSummaryRepeat').textContent=repeat;document.getElementById('soSummaryKw').textContent=type==='Solar Water Heater'?lpd.toFixed(0)+' LPD':kw.toFixed(3)+' kW';document.getElementById('soSummaryAmount').textContent=salesOrderMoney(amount);}
   function openSalesOrderModal(){document.getElementById('salesOrderForm')?.reset();document.getElementById('soId').value='';document.getElementById('soClientId').value='';document.getElementById('soDate').valueAsDate=new Date();document.getElementById('soRepeatCount').value=1;document.getElementById('soRepeatCount').dataset.auto='1';document.getElementById('soSelectionCaption')?.classList.add('d-none');document.getElementById('soOrgOptions')?.classList.remove('show');updateSalesOrderFields();new bootstrap.Modal(document.getElementById('salesOrderModal')).show();}
   function renderSalesOrders(){const tb=document.getElementById('salesOrderTableBody');if(!tb)return;const rows=(rawData.salesOrders||[]);tb.innerHTML=rows.length?rows.slice().reverse().map(o=>`<tr><td>${escapeHtml(salesOrderDate(o.date||o.entryDate))}</td><td>${escapeHtml(o.orgName||'')}</td><td>${escapeHtml(o.clientName||'')}</td><td>${escapeHtml(o.contactNumber||o.mobile||'')}</td><td>${escapeHtml(o.piStatus||'')}</td><td>${escapeHtml(o.orderFor||'')}</td><td>${escapeHtml(salesTypeLabel(o.salesType||o.typeOfSales||'Primary Sale'))}</td><td>${escapeHtml(o.repeatCount||1)}</td><td>${salesOrderNum(o.kw).toFixed(3)}</td><td>${salesOrderMoney(o.amount)}</td><td>${escapeHtml(o.createdBy||o.userEmail||'')}</td></tr>`).join(''):'<tr><td colspan="11" class="text-center text-muted py-4">No sales orders available.</td></tr>';}
-  async function saveSalesOrderRecord(payload){const res=await callBackend('saveSalesOrder',payload);if(res&&res.success!==false&&res.message!=='Action not found')return res;const local=loadLocalSalesOrders();local.push(payload);saveLocalSalesOrders(local);rawData.salesOrders=local;return {success:true,message:'Sales order saved locally. Add the matching backend action to persist it in Google Sheets.'};}
+  async function saveSalesOrderRecord(payload){
+    // Never treat localStorage as a successful Google Sheets save.
+    const res = await callBackend('saveSalesOrder', payload);
+    return res && res.success === true
+      ? res
+      : {success:false, message:res?.message || 'Sales order could not be saved to Google Sheets.'};
+  }
   document.getElementById('soOrgName')?.addEventListener('input',()=>{renderSalesOrderClientOptions();const q=String(document.getElementById('soOrgName')?.value||'').trim().toLowerCase();const c=(rawData.clients||[]).find(x=>String(x.orgName||'').trim().toLowerCase()===q);if(c){document.getElementById('soClientId').value=c.id||'';if(!document.getElementById('soClientName').value)document.getElementById('soClientName').value=c.contactName||'';if(!document.getElementById('soContact').value)document.getElementById('soContact').value=c.mobile||'';updateSalesOrderRepeatCount(true);}});document.getElementById('soOrgName')?.addEventListener('focus',renderSalesOrderClientOptions);document.getElementById('soContact')?.addEventListener('blur',()=>updateSalesOrderRepeatCount(true));
   ['soRepeatCount','soPanelQty','soPanelWp','soRateWp','soLpd','soRateLpd','soUtilityKw','soUtilityRate'].forEach(id=>document.getElementById(id)?.addEventListener('input',()=>{if(id==='soRepeatCount')document.getElementById(id).dataset.auto='0';updateSalesOrderCalculations();}));
   document.getElementById('soOrderFor')?.addEventListener('change',updateSalesOrderFields);
@@ -3962,17 +3971,62 @@ function dashboardStats(){
   document.getElementById('teamChatInput')?.addEventListener('focus',touchUserActivity); document.getElementById('teamChatForm')?.addEventListener('submit',async e=>{e.preventDefault();const input=document.getElementById('teamChatInput');const msg=input.value.trim();if(!msg||!chatPeerId)return;showProcessingMessage('Sending message','Delivering your message to the selected team member...');const sendBtn=document.getElementById('teamChatSend');sendBtn.disabled=true;const res=await callBackend('sendChatMessage',{senderId:currentUser.id,senderEmail:currentUser.email,receiverId:chatPeerId,message:msg});if(res.success){input.value='';await loadChatMessages();closeOperationMessage();showOperationMessage('Message sent','Your message was delivered successfully.','success');}else{closeOperationMessage();showOperationMessage('Message not sent',res.message||'Unable to send message.','error');}sendBtn.disabled=false;input.disabled=false;});
   document.getElementById('teamChatModal')?.addEventListener('hidden.bs.modal',stopChatPolling);
 
-  async function callBackend(action, payload) {
+  /*
+   * CENTRAL BACKEND GATEWAY
+   * JS-only fix: Code.gs requires email + authToken inside every
+   * authenticated payload. Form handlers were not forwarding authToken.
+   */
+  async function callBackend(action, payload = {}) {
     try {
+      const requestPayload = Object.assign({}, payload || {});
+
+      // login/selfRegister are public entry points and must not receive a
+      // stale cached auth token. All other requests automatically inherit the
+      // current authenticated session.
+      const publicAction = action === 'login' || action === 'selfRegister';
+      if (!publicAction && currentUser && currentUser.email) {
+        requestPayload.email = currentUser.email;
+        requestPayload.authToken = currentUser.authToken || '';
+        requestPayload.userId = requestPayload.userId || currentUser.id || '';
+        requestPayload.userRole = requestPayload.userRole || currentUser.role || '';
+        requestPayload.user = currentUser;
+      }
+
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: action, payload: payload })
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: String(action || ''), payload: requestPayload })
       });
-      return await response.json();
+
+      const text = await response.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (_) {
+        console.error('Apps Script returned non-JSON:', text);
+        return {
+          success: false,
+          message: 'Google Apps Script returned an invalid response. Check the existing Web App deployment URL and its access setting.'
+        };
+      }
+
+      if (!response.ok) {
+        return { success:false, message:result?.message || ('Google Apps Script HTTP error '+response.status) };
+      }
+      return result && typeof result === 'object'
+        ? result
+        : { success:false, message:'Empty response received from Google Sheets backend.' };
     } catch(err) {
-      console.error(err);
-      return { success: false, message: "Network/API communication error" };
+      console.error('Backend request failed:', err);
+      return {
+        success:false,
+        message: err?.message
+          ? 'Unable to reach Google Sheets backend: '+err.message
+          : 'Network/API communication error while saving to Google Sheets.'
+      };
     }
   }
 
